@@ -1,0 +1,12 @@
+{
+	"folders":
+	[
+		{
+			"path": "src"
+		}
+	],
+	"settings":
+	{
+		"TEXroot": "src/practice_report.tex"
+	}
+}
