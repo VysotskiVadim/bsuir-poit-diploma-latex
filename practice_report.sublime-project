@@ -3,7 +3,7 @@
 	[
 		{
 			"path": "src",
-			"file_exclude_patterns": ["*.log", "*.fls", "*.out", "*.gz", "*.pdf", "*.fdb_latexmk", "*.tox", "*.aux", "*.toc"]
+			"file_exclude_patterns": ["*.log", "*.fls", "*.out", "*.gz", "*.pdf", "*.fdb_latexmk", "*.tox", "*.aux", "*.toc", "*.bbl", "*.blg"]
 		}
 	],
 	"settings":
