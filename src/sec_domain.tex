@@ -39,10 +39,33 @@
 Рассмотрим алгоритмы предобработки использующиеся в работе.
 
 \subsubsection{}
-\label{sub:domain:image_processing:edges_analisys}
+\label{sub:domain:image_processing:edges_detection}
 Выделение границ.
 
 Выделение границ (выделение краёв) — термин в теории обработки изображения и компьютерного зрения, частично из области поиска объектов и выделения объектов, основывается на алгоритмах, которые выделяют точки цифрового изображения, в которых резко изменяется яркость или есть другие виды неоднородностей.
+
+Самым лучшим детектором границ считается детектор границ Кэнни~\cite{canny_edge_detector}. Потому как обладает следующими свойствами:
+\begin{itemize}
+  \item Хорошее обнаружение (устойчивость к шуму)
+  \item Хорошая локализация (толщина выделенной границы получается 2 пикселя)
+  \item Единственный отклик на одну границу
+\end{itemize}
+
+На рисунках \ref{fig:domain:image_processing:edges_detection:before_canny} и \ref{fig:domain:image_processing:edges_detection:after_canny} виден пример работы детектора границ Кэнни. 
+
+\begin{figure}[ht]
+\centering
+    \includegraphics[scale=0.6]{before_canny.PNG}  
+    \caption{Изображение до обработки детектором границ Кэнни}
+    \label{fig:domain:image_processing:edges_detection:before_canny}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+    \includegraphics[scale=0.6]{after_canny.PNG}  
+    \caption{Изображение после обработки детектором границ Кэнни}
+    \label{fig:domain:image_processing:edges_detection:after_canny}
+\end{figure}
 
 \subsection{Поиск номерного знака}
 \label{sub:domain:search}
