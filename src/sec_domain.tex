@@ -55,17 +55,45 @@
 
 \begin{figure}[ht]
 \centering
-    \includegraphics[scale=0.6]{before_canny.PNG}  
+    \includegraphics[scale=0.5]{before_canny.PNG}  
     \caption{Изображение до обработки детектором границ Кэнни}
     \label{fig:domain:image_processing:edges_detection:before_canny}
 \end{figure}
 
 \begin{figure}[ht]
 \centering
-    \includegraphics[scale=0.6]{after_canny.PNG}  
+    \includegraphics[scale=0.5]{after_canny.PNG}  
     \caption{Изображение после обработки детектором границ Кэнни}
     \label{fig:domain:image_processing:edges_detection:after_canny}
 \end{figure}
+
+
+\subsubsection{}
+\label{sub:temp:image_processing:binary}
+Бинаризация
+
+Бинаризация изображений - перевод полноцветного или в градациях серого изображения в монохромное, где присутствуют только два типа пикселей (темные и светлые)\cite{binary_image}. На рисунках \ref{fig:domain:image_processing:binary:before_binarization} и \ref{fig:domain:image_processing:binary:after_binarization} виден пример бинаризации изображения.
+
+\begin{figure}[ht]
+\centering
+    \includegraphics[scale=0.2]{before_binarization.jpg}  
+    \caption{Изображение до бинаризации}
+    \label{fig:domain:image_processing:binary:before_binarization}
+\end{figure}
+\begin{figure}[ht]
+\centering
+    \includegraphics[scale=0.2]{after_binarization.jpg}  
+    \caption{Изображение после бинаризации}
+    \label{fig:domain:image_processing:binary:after_binarization}
+\end{figure}
+
+Алгоритм бинаризации несложен. Сперва требуется перевести изображение в оттенки серого использую формулу $ Y = 0.2126R + 0.7152G + 0.072B $, где Y значение градации серого, а R G и B значение каналов исходных цветов. Далее нужно сравнить значение каждого пикселя с неким пороговым значение и если значение превышает порог сделать пиксель темным и светлым если наоборот. 
+Существуют различные подходы к выбору порогов, которые условно можно разделить на 2 группы:
+\begin{itemize}
+  \item Пороговые, которые ищут пороговое значение для изображение целиком
+  \item Адаптивные, которые выбирают отдельный порог для каждого участка изображения, обычно используются при неравномерном освещении.
+\end{itemize}
+
 
 \subsection{Поиск номерного знака}
 \label{sub:domain:search}
