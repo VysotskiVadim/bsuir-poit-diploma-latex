@@ -51,20 +51,22 @@
   \item Единственный отклик на одну границу
 \end{itemize}
 
-На рисунках \ref{fig:domain:image_processing:edges_detection:before_canny} и \ref{fig:domain:image_processing:edges_detection:after_canny} виден пример работы детектора границ Кэнни. 
+На рисунке \ref{fig:domain:image_processing:edges_detection:canny} виден пример работы детектора границ Кэнни. 
 
 \begin{figure}[ht]
 \centering
-    \includegraphics[scale=0.5]{before_canny.PNG}  
-    \caption{Изображение до обработки детектором границ Кэнни}
-    \label{fig:domain:image_processing:edges_detection:before_canny}
-\end{figure}
-
-\begin{figure}[ht]
-\centering
-    \includegraphics[scale=0.5]{after_canny.PNG}  
-    \caption{Изображение после обработки детектором границ Кэнни}
-    \label{fig:domain:image_processing:edges_detection:after_canny}
+  \begin{subfigure}[b]{0.48\textwidth} 
+    \centering
+    \includegraphics[width=\textwidth]{before_canny.PNG}  
+    \caption{Исходное изображение}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.48\textwidth} 
+    \centering
+    \includegraphics[width=\textwidth]{after_canny.PNG}  
+    \caption{Обработанное изображение}
+  \end{subfigure}
+  \caption{Детектор границ Кэнни}
+  \label{fig:domain:image_processing:edges_detection:canny}
 \end{figure}
 
 
@@ -72,19 +74,22 @@
 \label{sub:temp:image_processing:binary}
 Бинаризация
 
-Бинаризация изображений - перевод полноцветного или в градациях серого изображения в монохромное, где присутствуют только два типа пикселей (темные и светлые)\cite{binary_image}. На рисунках \ref{fig:domain:image_processing:binary:before_binarization} и \ref{fig:domain:image_processing:binary:after_binarization} виден пример бинаризации изображения.
+Бинаризация изображений - перевод полноцветного или в градациях серого изображения в монохромное, где присутствуют только два типа пикселей (темные и светлые)\cite{binary_image}. На рисунке \ref{fig:domain:image_processing:binary:binarization} виден пример бинаризации изображения.
 
 \begin{figure}[ht]
 \centering
-    \includegraphics[scale=0.2]{before_binarization.jpg}  
-    \caption{Изображение до бинаризации}
-    \label{fig:domain:image_processing:binary:before_binarization}
-\end{figure}
-\begin{figure}[ht]
-\centering
-    \includegraphics[scale=0.2]{after_binarization.jpg}  
-    \caption{Изображение после бинаризации}
-    \label{fig:domain:image_processing:binary:after_binarization}
+  \begin{subfigure}[b]{0.48\textwidth} 
+    \centering
+    \includegraphics[width=\textwidth]{before_binarization.jpg}  
+    \caption{Исходное изображение}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.48\textwidth} 
+    \centering
+    \includegraphics[width=\textwidth]{after_binarization.jpg}  
+    \caption{Бинаризированое изображение}
+  \end{subfigure}
+  \caption{Бинаризация}
+  \label{fig:domain:image_processing:binary:binarization}
 \end{figure}
 
 Алгоритм бинаризации несложен. Сперва требуется перевести изображение в оттенки серого использую формулу $ Y = 0.2126R + 0.7152G + 0.072B $, где Y значение градации серого, а R G и B значение каналов исходных цветов. Далее нужно сравнить значение каждого пикселя с неким пороговым значение и если значение превышает порог сделать пиксель темным и светлым если наоборот. 
@@ -104,18 +109,21 @@
 
 Наиболее очевидный способ нахождение рамки это поиск прямоугольного контура. Для этого производится пред-обработка для поиска границ, например c помощью оператора Кэнни~\cite{canny_edge_detector}, затем ищутся все прямоугольники и анализируются на схожесть с государственным стандартом~\cite{stb_914_99} по соотношению сторон. Так же существует модификация~\cite{recognition_using_hought} при которой анализируется только часть рамки. Т.е. после выделения контуров ищутся вертикальные прямые и для любых прямых, расположенных недалеко друг от друга, с правильным соотношением расстояния между ними к их высоте, рассматривается гипотеза о том что номер располагается между ними. 
 
-\begin{figure}[ht]
-\centering
-    \includegraphics[scale=0.5]{edge_analysis_graphic.png}  
-    \caption{Координаты боковых границ номера}
-    \label{fig:domain:search:edges_analisys:edge_graphic}
-\end{figure}
 
 \begin{figure}[ht]
 \centering
-    \includegraphics[scale=0.5]{edge_analysis_recognized_plate.png}  
+  \begin{subfigure}[b]{0.48\textwidth} 
+    \centering
+    \includegraphics[width=\textwidth]{edge_analysis_graphic.png}  
+    \caption{Координаты боковых границ номера}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.48\textwidth} 
+    \centering
+    \includegraphics[width=\textwidth]{edge_analysis_recognized_plate.png}  
     \caption{Распознанная граница номера}
-    \label{fig:domain:search:edges_analisys:detected_edge}
+  \end{subfigure}
+  \caption{Анализ границы номера}
+  \label{fig:domain:search:edges_analisys:edge_graphic}
 \end{figure}
 
 В своей работе автор не указывает на каком компьютере он запускал описанный выше алгоритм, но заявленное время работы при обработке изображений 640 х 480 пикселей 0,3 секунды, что делает его практически пригодным для работы в режиме реального времени. На тесте из 102 изображений, алгоритм нашел номера на 96 из них.
@@ -172,8 +180,8 @@ $ L_{x,y} = \sum_{i=0,j=0}^{i \leq x, j \leq y} I_{i,j} $, где $L_{x,y}$ эт
     \includegraphics[width=\textwidth]{haar_features_additional.jpg}  
     \caption{Дополнительные примитивы}
   \end{subfigure}
-  \label{fig:domain:search:violajones:haar_features}
   \caption{Примитивы Хаара}
+  \label{fig:domain:search:violajones:haar_features}
 \end{figure}
 
 \subsection{Распознавание символов}
