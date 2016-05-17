@@ -27,24 +27,70 @@
     \label{fig:creation:pipes_and_filters_microsoft}
 \end{figure}
 
-Описанная реализация фокусируется на возможности распределенных вычислений которая в контексте обработки изображений бесполезно, поскольку производительность полученная от распределения фильтров на различные машины будет нивелированна временем затраченным передачу обрабатываемого изображения по сети. Главная цель использования шаблона <<Каналы и фильтры>> это улучшение качества кода с точки зрения читаемости и модифицируемости. Декомпозиция кода на отдельные фильтры обработчики помогает упростить тестирование и реализацию отдельных модулей а правильная реализация каналов поможет в понимании связи фильтров и того что в целом происходит при обработке изображения. 
+Описанная реализация фокусируется на возможности распределенных вычислений которая в контексте обработки изображений бесполезно, поскольку производительность полученная от распределения фильтров на различные машины будет нивелированна временем затраченным передачу обрабатываемого изображения по сети. Главная цель при при использовании шаблона <<Каналы и фильтры>> в данном программном средстве это улучшение качества кода с точки зрения читаемости и модифицируемости. Декомпозиция кода на отдельные фильтры обработчики помогает упростить тестирование и реализацию отдельных модулей а правильная реализация каналов поможет в понимании связи фильтров и того что в целом происходит при обработке изображения. 
 
-\begin{lstlisting}[style=csharpstyle, caption={Пример автоматического вывода типа функции}, label=lst:creation:pipes_example]
-Mat binarizedPlate = null;
-return _processFactory.Invoke()
-	.Use(input)
-    .Do<ReadImageFromBytesProcessor, Mat>()
-    .Do<MakeImageGrayProcessor, Mat>()
-    .Do<DetectAndCropPlateNumberProcessor, IEnumerable<Mat>>()
-    .ForEachItem(p => 
-        p.Do<LogCurrentImageProcessor, Mat>()
-        .Do<OtsuBinarizationProcessor, Mat>()
-        .SaveCurrentResultTo(r => binarizedPlate = r.Value.Clone())
-        .Do<InvertBinarizedImageProcessor, Mat>()
-        .Do<FindContoursProcessor, Point[][]>()
-        .Do<SelectLettersContours, Point[][]>(processor => processor.UseImage(binarizedPlate))
-        .Do<CropLettersProcessor, IEnumerable<Mat>>(processor => processor.UseImage(binarizedPlate))
-        .ForEachItem(ip => ip.Do<GaussianBlurProcessor, Mat>().Do<TeseractOcrProcessor, char>()))
-        .Do<StringAgregateProcessor, IEnumerable<string>>()
-        .GetResult();
+Прежде чем приступить к рассмотрению иходного кода требуется определить вспомогательные классы. 
+В листинге \ref{lst:creation:result} приведена чать описания класса Result.
+\begin{lstlisting}[style=fsharpstyle, caption={Определение вспомогательного класса Result}, label=lst:creation:result]
+public class Result
+{
+  protected Result(bool success, string error)
+  {
+    Success = success;
+    Error = error;
+  }
+  public bool Success { get; private set; }
+  public bool Failed => !Success;
+  public string Error { get; private set; }
+  
+  // ... 
+}
 \end{lstlisting}
+Данный класс предназначен для упрощения обработки ошибок: все методы которые могут завершится неудачей должны возвращать класс Result не создавая при этом исключительных ситуаций. Использование описанной техники вместо исключительных ситуаций делает код понятнее потому как он исполняется последовательно как этого требует структурное программирование \cite{structured_programming}. Так же в программном средстве используется техника помогающая бороться с ошибками связанными с null значением. Это очень большая проблема для программистов! Техника состоит из 2 частей, первая это библиотека NullGuard \cite{null_guard}, которая встраивается в процесс компиляции и в начало каждого метода добавляет код проверяющий все входящие параметра на null значения, и в конец метода код проверяющий выходящее значение на null. Это запретит разработчику использовать null значения. Но для тех ситуаций где действительно значение может быть а может и не быть введем класс Maybe, код которого представлен на листинге \ref{lst:creation:maybe}. Приведенный выше подход помогает четко разделить в коде значения которые могут принимать значения null а какие нет.
+\begin{lstlisting}[style=fsharpstyle, caption={Определение вспомогательного класса Maybe}, label=lst:creation:maybe]
+public struct Maybe<T>
+{
+  private readonly T _value;
+  public T Value
+  {
+    get
+    {
+      if (HasNoValue)
+      {
+        throw new NotSupportedException("Maybe has not value");
+      }
+        return _value;
+      }
+    }
+  }
+  public bool HasValue => return _value != null; 
+  public bool HasNoValue => !HasValue;
+  private Maybe([AllowNull] T value)
+  {
+    _value = value;
+  }
+  public static implicit operator Maybe<T>([AllowNull] T value)
+  {
+    return new Maybe<T>(value);
+  }
+}
+\end{lstlisting}
+
+Рассмотрим реализацию архитектурного шаблона <<Каналы и фильтры>>. В листинге \ref{lst:creation:ifilter} можно увидет определение интерфейса для фильтра. 
+\begin{lstlisting}[style=fsharpstyle, caption={Определение интерфейса для фильтра}, label=lst:creation:ifilter]
+public interface IFilter<in TIn, TOut> 
+{
+	Result<TOut> Process(TIn input);
+}
+\end{lstlisting}
+Интерфейс фильтр определяет просто сущность производящую определенную операцию над входящими данными и возвращающую результат либо ошибку. На изображении 
+
+\begin{figure}[ht] 
+    \centering
+    \includegraphics[scale=0.4]{filters_uml.png}  
+    \caption{UML диаграмма фильтров}
+    \label{fig:creation:filters_uml}
+\end{figure}
+
+
+Для реализации микроядерной архитектуры мы будем использовать загрузку .net сборок. Для каждой 
