@@ -227,4 +227,30 @@ public static Pipe<IEnumerable<TOut>> ForEachItem<T, TOut>(this Pipe<IEnumerable
 }
 \end{lstlisting}
 
+Результат использования фильтров и каналов можно увидеть в листинге \ref{lst:creation:pipe_and_filters_results}.
+
+\begin{lstlisting}[style=fsharpstyle,caption={Определение метода расширения класса Pipe},label=lst:creation:pipe_and_filters_results]
+public Result<IEnumerable<string>> Process(byte[] input)
+{
+  Mat binarizedPlate = null;
+
+  return _processFactory.Invoke()
+    .Use(input)
+    .Do<ReadImageFromBytesFilter, Mat>()
+    .Do<MakeImageGrayFilter, Mat>()
+    .Do<DetectAndCropPlateNumberFilter, IEnumerable<Mat>>()
+    .ForEachItem(p => 
+      p.Do<LogCurrentImageFilter, Mat>()
+      .Do<OtsuBinarizationFilter, Mat>()
+      .SaveCurrentResultTo(r => binarizedPlate = r.Value.Clone())
+      .Do<InvertBinarizedImageFilter, Mat>()
+      .Do<FindContoursFilter, Point[][]>()
+      .Do<SelectLettersContours, Point[][]>(processor => processor.UseImage(binarizedPlate))
+      .Do<CropLettersFilter, IEnumerable<Mat>>(processor => processor.UseImage(binarizedPlate))
+      .ForEachItem(ip => ip.Do<GaussianBlurFilter, Mat>().Do<TeseractOcrFilter, char>()))
+    .Do<StringAgregateFilter, IEnumerable<string>>()
+    .GetResult();
+}
+\end{lstlisting}
+
 Для реализации микроядерной архитектуры мы будем использовать загрузку .net сборок. Для каждой 
