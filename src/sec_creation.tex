@@ -122,4 +122,109 @@ public interface IFilter<in TIn, TOut>
 
 Проверка совместимости типов фильтров на этапе компиляции означает то, что в случае совмещения выхода фильтра $A$ и входа фильтра $B$ код будет компилироваться только в том случае, если выходным значением фильтра $A$ будет тип $a$ а входным значением фильтра $B$ будет тип $b$ такие что $a \geq b$.
 
+При реализации каналов хорошо подойдет прием программирования <<Fluent interface>> - способ реализации объектно-ориентированного API, нацеленный на повышение читабельности исходного кода программы.
+
+В листинге \ref{lst:creation:pipe} можно увидеть реализацию описанных выше функций.
+
+\begin{lstlisting}[style=fsharpstyle,caption={Определение класса Pipe},label=lst:creation:pipe]
+public class Pipe<T>
+{
+  internal IPipeFactory PipeFactory { get; }
+
+  public Pipe(IPipeFactory pipeFactory)
+  {
+    PipeFactory = pipeFactory;
+  }
+
+  protected Result<T> Obj { get; set; }
+
+  public Pipe<TOut> Do<TFilter, TOut>(Action<TFilter> initAction) where TFilter: IFilter<T, TOut>
+  {
+    Pipe<TOut> result;
+    if (Obj.Success)
+    {
+      var processor = PipeFactory.GetProcessor<TFilter>();
+      initAction(processor);
+      var processingResult = processor.Process(Obj.Value);
+      result = new Pipe<TOut>(PipeFactory).Use(processingResult);
+    }
+    else
+    {
+      result = new Pipe<TOut>(PipeFactory).Use(Result.Fail<TOut>(Obj.Error));
+    }
+
+    return result;
+  }
+
+  public Pipe<TOut> Do<TProcessor, TOut>() where TProcessor : IFilter<T, TOut>
+  {
+    Pipe<TOut> result;
+    if (Obj.Success)
+    {
+      var processor = PipeFactory.GetProcessor<TProcessor>();
+      var processingResult = processor.Process(Obj.Value);
+      result = new Pipe<TOut>(PipeFactory).Use(processingResult);
+    }
+    else
+    {
+      result = new Pipe<TOut>(PipeFactory).Use(Result.Fail<TOut>(Obj.Error));
+    }
+
+    return result;
+  }
+
+  public Result<T> GetResult()
+  {
+    return Obj;
+  }
+
+  public Pipe<T> Use(T obj)
+  {
+    Obj = Result<T>.Ok(obj);
+    return this;
+  }
+
+  public Pipe<T> Use(Result<T> obj)
+  {
+    Obj = obj;
+    return this;
+  }
+
+  public Pipe<T> SaveCurrentResultTo(Action<Result<T>> saveCurrentResultAction)
+  {
+    saveCurrentResultAction(this.GetResult());
+    return this;
+  }
+}
+\end{lstlisting}
+
+Для реализации связей между фильтрами многие ко многим была использованна возможностью языка \csharp{} <<Метод расширение>>. Это возможность написать статический метод за пределами типа $A$ и принимающий первым параметром объект типа $A$, при чем вызов этого метода будет выглядеть как вызов метода у типа $A$. Самое интересное что тип может быть интерфейсом! И для реализации связей я использовал интерфейс IEnumerable<T>. Реализация метода приведена в листинге \ref{lst:creation:pipe_enumeration}.
+\begin{lstlisting}[style=fsharpstyle,caption={Определение метода расширения класса Pipe},label=lst:creation:pipe_enumeration]
+public static Pipe<IEnumerable<TOut>> ForEachItem<T, TOut>(this Pipe<IEnumerable<T>> pipe, Func<Pipe<T>, Pipe<TOut>>  action)
+{
+  var currentResult = pipe.GetResult();
+  var result = new List<TOut>();
+  if (currentResult.Success)
+  {
+    foreach (var item in currentResult.Value)
+    {
+      var processResult = action(new Pipe<T>(pipe.PipeFactory).Use(item)).GetResult();
+      if (processResult.Success)
+      {
+        result.Add(processResult.Value);
+      }
+    }
+  }
+
+  if (result.Any())
+  {
+    return new Pipe<IEnumerable<TOut>>(pipe.PipeFactory).Use(Result.Ok(result.AsEnumerable()));
+  }
+  else
+  {
+    return new Pipe<IEnumerable<TOut>>(pipe.PipeFactory).Use(Result.Fail<IEnumerable<TOut>>("Not one processor hasn't finish successfulley"));
+  }
+}
+\end{lstlisting}
+
 Для реализации микроядерной архитектуры мы будем использовать загрузку .net сборок. Для каждой 
