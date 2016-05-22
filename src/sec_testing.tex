@@ -1,0 +1,300 @@
+\newcommand{\connectButton}{<<Connect to IP camera>>}
+\newcommand{\ipInput}{<<IP address>>}
+\newcommand{\nameInput}{<<Camera name>>}
+\newcommand{\imrPage}{<<Image>>}
+\newcommand{\submitButton}{<<Submit>>}
+\newcommand{\selectButton}{<<Select Image>>}
+\newcommand{\pluginFolder}{<<plugins>>}
+
+
+
+\section{Тестирование, проверка работоспособности и анализ полученных результатов} % (fold)
+\label{sec:testing}
+
+Проведено тестирование программного средства. Целью данного испытания было проверка работоспособности ПС. 
+Установка и тестирование программного средства производилась на персональном компьютере с установленной операционной системой Windows 10. Также ПС протестировано в последних версиях браузеров Google Chrome, Mozilla Firefox.
+
+\begin{longtable}{| >{\raggedright}m{0.06\linewidth} 
+                  | >{\raggedright}m{0.18\linewidth} 
+                  | >{\raggedright}m{0.27\linewidth} 
+                  | >{\raggedright}m{0.2\linewidth} 
+                  | >{\raggedright\arraybackslash}m{0.15\linewidth}|}
+   \caption{Набор тест-кейсов взаимодействия с IP камерами} \label{table:testing:ip_cameras} \\
+
+   \hline
+   \No{} тест-кейса & Тестируемая функциональность & Последовательность действий & Ожидаемый результат & Полученный результат\\
+   \endfirsthead
+
+	\multicolumn{3}{c}%
+	{{ \raggedleft \tablename\ \thetable{} -- Продолжение таблицы}} \\
+
+	\hline
+   	\No{} тест-кейса & Тестируемая функциональность & Последовательность действий & Ожидаемый результат & Полученный результат\\
+
+	\hline 
+	\endhead
+
+	\hline
+	1 & Подключение. Валидация IP адреса. &
+   			\begin{enumerate}
+				\item[1)] запустить приложение;
+				\item[2)] нажать на кнопку \connectButton{}.
+			\end{enumerate}
+   			& 
+   			\begin{enumerate}
+   				\item под полевом ввода \ipInput{} сообщение «Please fill out camera IP address».
+   				\item под полевом ввода \nameInput{} сообщение «Please fill out camera name».
+   			\end{enumerate}
+   			& Тест успешно пройден \\
+	\hline
+	2 & Подключение. Валидация IP адреса. & 
+   			\begin{enumerate}
+				\item[1)] запустить приложение;
+				\item[2)] ввести в поле \nameInput{} IP адрес в неверном формате;
+				\item[3)] ввести в поле \ipInput{} имя камеры;
+				\item[4)] нажать на кнопку \connectButton{}.
+			\end{enumerate}
+   			& 
+   			\begin{enumerate}
+   				\item сообщение под полевом ввода <<IP address>> «IP address is invalid».
+   			\end{enumerate}
+   			& Тест успешно пройден \\ 
+
+	\hline
+	3 & Подключение. Обработка ошибок. & 
+   			\begin{enumerate}
+				\item[1)] запустить приложение;
+				\item[2)] вести в поле \ipInput{} несуществующий IP адрес в верном формате;
+				\item[3)] ввести в поле \ipInput{} имя камеры;
+				\item[4)] нажать кнопку \connectButton{};
+			\end{enumerate}
+   			& 
+   			\begin{enumerate}
+   				\item  под полевом ввода \ipInput{} «IP camera is not rearchable».
+   			\end{enumerate}
+   			& Тест успешно пройден \\ 	
+
+	\hline
+	4 & Подключение. Успешное подключение. & 
+   			\begin{enumerate}
+				\item[1)] запустить приложение;
+				\item[2)] ввести в поле \ipInput{} имя камеры;
+				\item[3)] ввести IP адрес доступной IP камеры в поле \ipInput{};
+				\item[4)] нажать кнопку \connectButton{};
+			\end{enumerate}
+   			& 
+   			\begin{enumerate}
+   				\item увидеть видеопоток с IP камеры.
+   			\end{enumerate}
+   			& Тест успешно пройден \\
+
+	\hline
+	5 & Подключение. Успешное подключение нескольких & 
+   			\begin{enumerate}
+				\item[1)] запустить приложение;
+				\item[2)] ввести в поле \ipInput{} имя камеры;
+				\item[3)] ввести IP адрес доступной IP камеры в поле \ipInput{};
+				\item[4)] нажать кнопку \connectButton{};
+				\item[5)] повторить пункты 2-4 ещё раз;
+			\end{enumerate}
+   			& 
+   			\begin{enumerate}
+   				\item Видны видео потоки с 2-х камер.
+   			\end{enumerate}
+   			& Тест успешно пройден \\
+
+	\hline
+	6 & Подключение. Переподключение. & 
+   			\begin{enumerate}
+				\item[1)] запустить приложение;
+				\item[2)] ввести в поле \ipInput{} имя камеры;
+				\item[3)] ввести IP адрес доступной IP камеры в поле \ipInput{};
+				\item[4)] нажать кнопку \connectButton{};
+				\item[5)] перезагрузить сервер;
+			\end{enumerate}
+   			& 
+   			\begin{enumerate}
+   				\item виден видеопоток с камеры;
+   			\end{enumerate}
+   			& Тест успешно пройден \\
+
+   \hline
+\end{longtable}
+
+\begin{longtable}{| >{\raggedright}m{0.06\linewidth} 
+                  | >{\raggedright}m{0.18\linewidth} 
+                  | >{\raggedright}m{0.27\linewidth} 
+                  | >{\raggedright}m{0.2\linewidth} 
+                  | >{\raggedright\arraybackslash}m{0.15\linewidth}|}
+	\caption{Набор тест-кейсов модуля «Работа с изображениями»}
+	\label{table:testing:own_content} \\
+
+   \hline
+   \No{} тест-кейса & Тестируемая функциональность & Последовательность действий & Ожидаемый результат & Полученный результат\\
+   \endfirsthead
+
+	\multicolumn{3}{c}%
+	{{ \raggedleft \tablename\ \thetable{} -- Продолжение таблицы}} \\
+
+	\hline
+   	\No{} тест-кейса & Тестируемая функциональность & Последовательность действий & Ожидаемый результат & Полученный результат\\
+
+	\hline 
+	\endhead
+
+	\hline
+	1 & Загрузка. Валидация. & 
+   			\begin{enumerate}
+				\item[1)] запустить приложение;
+				\item[2)] перейти на страницу \imrPage{};
+				\item[3)] нажать \submitButton{};
+			\end{enumerate}
+   			& 
+   			\begin{enumerate}
+   				\item Появилось сообщение <<Please select an image>>;
+   			\end{enumerate}
+   			& Тест успешно пройден \\
+	\hline
+	2 & Загрузка. Распознавание. & 
+   			\begin{enumerate}
+				\item[1)] запустить приложение;
+				\item[2)] перейти на страницу \imrPage{};
+				\item[3)] нажать на кнопку \selectButton{};
+				\item[4)] выбрать изображение для распознавания;
+				\item[5)] нажать \submitButton{};
+			\end{enumerate}
+   			& 
+   			\begin{enumerate}
+   				\item видны все шаги распознавания;
+   			\end{enumerate}
+   			& Тест успешно пройден \\ 
+
+	\hline
+	3 & Загрузка. Обработка ошибок. & 
+   			\begin{enumerate}
+				\item[1)] запустить приложение;
+				\item[2)] перейти на страницу \imrPage{};
+				\item[3)] нажать на кнопку \selectButton{};
+				\item[4)] выбрать неверный файл;
+				\item[5)] нажать \submitButton{};
+			\end{enumerate}
+   			& 
+   			\begin{enumerate}
+   				\item сообщение «Can't read image».
+   			\end{enumerate}
+   			& Тест успешно пройден \\ 	
+   \hline
+\end{longtable}
+
+\begin{longtable}{| >{\raggedright}m{0.06\linewidth} 
+                  | >{\raggedright}m{0.18\linewidth} 
+                  | >{\raggedright}m{0.27\linewidth} 
+                  | >{\raggedright}m{0.2\linewidth} 
+                  | >{\raggedright\arraybackslash}m{0.15\linewidth}|}
+	\caption{Набор тест-кейсов для работы с плагинами}
+	\label{table:testing:marketplace} \\
+
+   \hline
+   \No{} тест-кейса & Тестируемая функциональность & Последовательность действий & Ожидаемый результат & Полученный результат\\
+   \endfirsthead
+
+	\multicolumn{3}{c}%
+	{{ \raggedleft \tablename\ \thetable{} -- Продолжение таблицы}} \\
+
+	\hline
+   	\No{} тест-кейса & Тестируемая функциональность & Последовательность действий & Ожидаемый результат & Полученный результат\\
+
+	\hline 
+	\endhead
+
+	\hline
+	1 & Подключение. & 
+   			\begin{enumerate}
+				\item[1)] подложить в папку \pluginFolder{} валидный плагин;
+				\item[2)] запустить приложение;
+			\end{enumerate}
+   			& 
+   			\begin{enumerate}
+   				\item в лог файле есть строчка о подключении плагина.
+   			\end{enumerate}
+   			& Тест успешно пройден \\
+	\hline
+	2 & Подключение нескольких.  & 
+   			\begin{enumerate}
+				\item[1)] подложить в папку \pluginFolder{} несколько валидных плагинов;
+				\item[2)] запустить приложение;
+			\end{enumerate}
+   			& 
+   			\begin{enumerate}
+   				\item в лог файле есть строчка о подключении каждого плагина;
+   			\end{enumerate}
+   			& Тест успешно пройден \\ 
+
+	\hline
+	3 & Подключение. Обработка ошибок. & 
+   			\begin{enumerate}
+				\item[1)] подложить в папку \pluginFolder{} валидный плагин;
+				\item[2)] подложить в папку \pluginFolder{} не валидный плагин;
+				\item[3)] запустить приложение;
+			\end{enumerate}
+   			& 
+   			\begin{enumerate}
+   				\item в лог файле есть информация о подключении валидного плагина;
+   				\item в лог файле есть информация об ошибке подключении не валидного плагина;
+   			\end{enumerate}
+   			& Тест успешно пройден \\
+	\hline	
+
+	\hline
+	4 & Интеграция. & 
+   			\begin{enumerate}
+   				\item[1)] подложить в папку \pluginFolder{} логирующий плагин;
+				\item[2)] запустить приложение;
+				\item[3)] ввести в поле \ipInput{} имя камеры;
+				\item[4)] ввести IP адрес доступной IP камеры в поле \ipInput{};
+				\item[4)] нажать на кнопку <<Open>>;
+			\end{enumerate}
+   			& 
+   			\begin{enumerate}
+   				\item плагин логировал обработку неудачи.
+   			\end{enumerate}
+   			& Тест успешно пройден \\
+
+   \hline
+\end{longtable}
+
+\begin{longtable}{| >{\raggedright}m{0.06\linewidth} 
+                  | >{\raggedright}m{0.18\linewidth} 
+                  | >{\raggedright}m{0.27\linewidth} 
+                  | >{\raggedright}m{0.2\linewidth} 
+                  | >{\raggedright\arraybackslash}m{0.15\linewidth}|}
+	\caption{Набор тест-кейсов распознавания}
+	\label{table:testing:dashboard_constructing} \\
+
+   \hline
+   \No{} тест-кейса & Тестируемая функциональность & Последовательность действий & Ожидаемый результат & Полученный результат\\
+   \endfirsthead
+
+	\multicolumn{3}{c}%
+	{{ \raggedleft \tablename\ \thetable{} -- Продолжение таблицы}} \\
+
+	\hline
+   	\No{} тест-кейса & Тестируемая функциональность & Последовательность действий & Ожидаемый результат & Полученный результат\\
+
+	\hline 
+	\endhead
+
+	\hline
+	1 & Тест на базе данных & 
+   			\begin{enumerate}
+				\item[1)] запустить консольный проект <<TestDb>> передовая как параметр путь к изображениям
+			\end{enumerate}
+   			& 
+   			\begin{enumerate}
+   				\item убедиться что все изображения успешно распознанны;
+   			\end{enumerate}
+   			& Тест успешно пройден \\
+	\hline
+\end{longtable}
+
+Успешность прохождения тестов показывает корректность работы программы с реальными данными и соответствие функциональным требованиям.
