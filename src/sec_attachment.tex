@@ -240,3 +240,534 @@ public interface IRecongnitionResultHander
 }
 \end{lstlisting}
 
+\begin{lstlisting}[style=fsharpstyle,caption={Загрузчик плагинов}, label=lst:plugin_loader]
+ public class PluginLoader
+    {
+        public void Load(string path, IUnityContainer container)
+        {
+            foreach (var dlls in Directory.EnumerateFiles(path, "*.dll"))
+            {
+                try
+                {
+                    Assembly assembly = Assembly.LoadFrom(dlls);
+                    assembly.GetTypes()
+                        .Where(mytype => mytype.GetInterfaces().Contains(typeof (IRecongnitionResultHander)))
+                        .ForEach(t => container.RegisterType(typeof(IRecongnitionResultHander), t, dlls + t.FullName));
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine($"Eror to load assembly from file {e.Message}");
+                    throw;
+                }
+            }
+        }
+    }
+\end{lstlisting}
+
+\begin{lstlisting}[style=fsharpstyle,caption={Исходный код}, label=lst:recognition_result_handler]
+
+    public static class Helper
+    {
+        public static IEnumerable<T> ForEach<T>(this IEnumerable<T> collection, Action<T> action)
+        {
+            var forEach = collection as T[] ?? collection.ToArray();
+            foreach (var item in forEach)
+            {
+                action(item);
+            }
+            return forEach;
+        } 
+    }
+
+    public interface IPipeFactory
+    {
+        TProcessor GetProcessor<TProcessor>() where TProcessor : IProcessor;
+    }
+
+    public interface IRecongnitionResultHander
+    {
+        void HandleSuccess(string result, Mat image);
+        void HandleFaulure(Mat image);
+    }
+
+
+    public class DebugLogger : IDebugLogger
+    {
+        private readonly IDebugLogBuilder _debugLogBuilder;
+
+        public DebugLogger(IDebugLogBuilder debugLogBuilder)
+
+        {
+            _debugLogBuilder = debugLogBuilder;
+        }
+
+        public void Log(Action<IDebugLogBuilder> logAction)
+        {
+            logAction(_debugLogBuilder);
+        }
+    }
+
+    [Obsolete("Do not use it directly, use IDebugLogger to access this functionality")]
+    public interface IDebugLogBuilder
+    {
+        IDebugLogBuilder AddMessage(string message);
+
+        IDebugLogBuilder AddImage(Mat image);
+    }
+
+    public interface IDebugLogger
+    {
+#pragma warning disable 618
+        void Log(Action<IDebugLogBuilder> logAction);
+#pragma warning restore 618
+    }
+
+     public class CannyFilter : IFilter<Mat, Mat>
+    {
+        private readonly IDebugLogger _debugLogger;
+
+        public CannyFilter(IDebugLogger debugLogger)
+        {
+            _debugLogger = debugLogger;
+        }
+
+        public Result<Mat> Process(Mat input)
+        {
+            CvInvoke.Canny(input, input, 100, 300, 3);
+            _debugLogger.Log(logBuilder => logBuilder.AddMessage("Canny result").AddImage(input));
+            return Result<Mat>.Ok(input);
+        }
+    }
+
+    public class CropLettersFilter : IFilter<Point[][], IEnumerable<Mat>>
+    {
+        private readonly IDebugLogger _debugLogger;
+
+        private Mat _image;
+
+        public CropLettersFilter(IDebugLogger debugLogger)
+        {
+            _debugLogger = debugLogger;
+        }
+
+        public Result<IEnumerable<Mat>> Process(Point[][] input)
+        {
+            if (_image == null)
+            {
+                return Result.Fail<IEnumerable<Mat>>("Image hasn't been set for CropLettersFilter");
+            }
+
+            _debugLogger.Log(debugLogBuilder =>
+            {
+                debugLogBuilder.AddMessage($"found letters {input.Length}");
+                var inputWithSelectedLetters = _image.Clone();
+                for (int i = 0; i < input.Length; i++)
+                {
+                    CvInvoke.DrawContours(inputWithSelectedLetters, new VectorOfVectorOfPoint(input), i, new MCvScalar(255, 255, 255));
+                }
+                debugLogBuilder.AddImage(inputWithSelectedLetters);
+            });
+
+            var rotationAngle = GetRotationAngle(input);
+
+            var imageToCrop = _image;
+            List<Mat> result = new List<Mat>();
+            foreach (var letterCountor in input)
+            {
+                var rect = CvInvoke.BoundingRectangle(new VectorOfPoint(letterCountor));
+                float angle = rotationAngle;
+                var rectSize = rect.Size;
+                var rectCenter = new PointF(rect.X + rectSize.Width / 2f, rect.Y + rectSize.Height / 2f);
+
+                //rectSize.Width += (int)Math.Floor(rectSize.Width*0.2);
+                //rectSize.Height += (int)Math.Floor(rectSize.Height*0.2);
+
+                rectSize.Width += 3;
+                rectSize.Height += 3;
+
+                if (angle < -45)
+                {
+                    angle += 90;
+                    var temp = rectSize.Width;
+                    rectSize.Width = rectSize.Height;
+                    rectSize.Height = temp;
+                }
+
+                var rotationMatrix = new Mat();
+                CvInvoke.GetRotationMatrix2D(rectCenter, angle, 1, rotationMatrix);
+                var rotated = new Mat();
+                CvInvoke.WarpAffine(imageToCrop, rotated, rotationMatrix, imageToCrop.Size, Inter.Cubic);
+                var cropped = new Mat();
+                CvInvoke.GetRectSubPix(rotated, new Size((int)rectSize.Width, (int)rectSize.Height), rectCenter, cropped);
+                result.Add(cropped);
+                //_debugLogger.Log(logBuilder => logBuilder.AddMessage("crop letter").AddImage(cropped));
+            }
+
+            return Result.Ok(result.AsEnumerable());
+        }
+
+        private float GetRotationAngle(Point[][] contours)
+        {
+            var hieghstPointsInTwoBiggestCountors =
+                contours.Select(contour => contour.OrderByDescending(point => point.Y))
+                    .OrderByDescending(contour => contour.First().Y)
+                    .Take(2)
+                    .Select(contour => contour.First())
+                    .ToArray();
+
+            var p1 = hieghstPointsInTwoBiggestCountors[0];
+            var p2 = hieghstPointsInTwoBiggestCountors[1];
+
+            var rotationAngleTangens = Math.Abs((float)p1.Y - p2.Y)/Math.Abs(p1.X - p2.X);
+            return (float)(Math.Atan(rotationAngleTangens) * 180 / Math.PI);
+        }
+
+        public void UseImage(Mat image)
+        {
+            _image = image;
+        }
+    }
+
+    public class DetectAndCropPlateNumberFilter : IFilter<Mat, IEnumerable<Mat>>
+    {
+        private readonly IDebugLogger _debugLogger;
+
+        public DetectAndCropPlateNumberFilter(IDebugLogger debugLogger)
+        {
+            _debugLogger = debugLogger;
+        }
+
+        public Result<IEnumerable<Mat>> Process(Mat input)
+        {
+            return Result.Ok(DetectAndCrop(input));
+        }
+
+        public IEnumerable<Mat> DetectAndCrop(Mat input)
+        {
+            var numberCascade = new CascadeClassifier("haarcascade_russian_plate_number.xml");
+            var rectangles = numberCascade.DetectMultiScale(input);
+
+            _debugLogger.Log(debugLogBuilder =>
+            {
+                debugLogBuilder.AddMessage($"Haarcascade return {rectangles.Length} results");
+                var inputCoppy = input.Clone();
+                rectangles.ForEach(r => CvInvoke.Rectangle(inputCoppy, r, new MCvScalar(255, 0, 0), 3, LineType.FourConnected));
+                debugLogBuilder.AddImage(inputCoppy);
+            });
+
+            return rectangles.Select(rectangle => new Mat(input, rectangle)).ToList();
+        }
+    }
+
+     public class FindContoursFilter : IFilter<Mat, Point[][]>
+    {
+        private readonly IDebugLogger _debugLogger;
+
+        public FindContoursFilter(IDebugLogger debugLogger)
+        {
+            _debugLogger = debugLogger;
+        }
+
+        public Result<Point[][]> Process(Mat input)
+        {
+            var contoursDetected = new VectorOfVectorOfPoint();
+            CvInvoke.FindContours(input, contoursDetected, null, RetrType.List, ChainApproxMethod.ChainApproxSimple);
+            var contours = contoursDetected.ToArrayOfArray();
+            Result<Point[][]> result;
+            if (contours.Length > 0)
+            {
+                result = Result.Ok(contours);
+            }
+            else
+            {
+                result = Result.Fail<Point[][]>("Contours hasn't been found");
+            }
+
+            _debugLogger.Log(logBuilder =>
+            {
+                if (result.Success)
+                {
+                    var imageToDrawContours = new Mat(input.Size, DepthType.Cv8U, 3);
+                    imageToDrawContours.SetTo(new MCvScalar(0, 0, 0));
+                    var random = new Random();
+                    for (int i = 0; i < contours.Length; i++)
+                    {
+                        CvInvoke.DrawContours(imageToDrawContours, contoursDetected, i, new MCvScalar(random.Next(255), random.Next(255), random.Next(255)));
+                    }
+                    logBuilder.AddMessage($"Found {contours.Length} contours").AddImage(imageToDrawContours);
+                }
+                else
+                {
+                    logBuilder.AddMessage(result.Error);
+                }
+            });
+
+            return result;
+        }
+    }
+
+    public class GaussianBlurFilter : IFilter<Mat, Mat>
+    {
+        public Result<Mat> Process(Mat input)
+        {
+            var level = 3;
+            CvInvoke.GaussianBlur(input, input, new Size(level, level), 0);
+            return Result<Mat>.Ok(input);
+        }
+    }
+
+
+    public class InvertBinarizedImageFilter : IFilter<Mat, Mat>
+    {
+        public Result<Mat> Process(Mat input)
+        {
+            CvInvoke.Threshold(input, input, 0, 255, ThresholdType.BinaryInv);
+            return Result<Mat>.Ok(input);
+        }
+    }
+
+    public class InvertBinarizedImageFilter : IFilter<Mat, Mat>
+    {
+        public Result<Mat> Process(Mat input)
+        {
+            CvInvoke.Threshold(input, input, 0, 255, ThresholdType.BinaryInv);
+            return Result<Mat>.Ok(input);
+        }
+    }
+
+    public class LogCurrentImageFilter : IFilter<Mat, Mat>
+    {
+        private readonly IDebugLogger _debugLogger;
+
+        public LogCurrentImageFilter(IDebugLogger debugLogger)
+        {
+            _debugLogger = debugLogger;
+        }
+
+        public Result<Mat> Process(Mat input)
+        {
+            _debugLogger.Log(debugBuilder => debugBuilder.AddMessage("Current image is:").AddImage(input));
+            return Result<Mat>.Ok(input);
+        }
+    }
+
+    public class MakeImageGrayFilter : IFilter<Mat, Mat>
+    {
+        public Result<Mat> Process(Mat input)
+        {
+            CvInvoke.CvtColor(input, input, ColorConversion.Bgr2Gray);
+            return Result.Ok(input);
+        }
+    }
+
+    public class OtsuBinarizationFilter : IFilter<Mat, Mat>
+    {
+        private readonly IDebugLogger _debugLogger;
+
+        public OtsuBinarizationFilter(IDebugLogger debugLogger)
+        {
+            _debugLogger = debugLogger;
+        }
+
+        public Result<Mat> Process(Mat input)
+        {
+            CvInvoke.Threshold(input, input, 0, 255, ThresholdType.Otsu);
+            _debugLogger.Log(logBuilder => logBuilder.AddMessage("Binarized image").AddImage(input));
+            return Result<Mat>.Ok(input);
+        }
+    }
+
+    public class ReadImageFromBytesFilter : IFilter<byte[], Mat>
+    {
+        private readonly IDebugLogger _debugLogger;
+
+        public ReadImageFromBytesFilter(IDebugLogger debugLogger)
+        {
+            _debugLogger = debugLogger;
+        }
+
+        public Result<Mat> Process(byte[] input)
+        {
+            var image = new Mat();
+            CvInvoke.Imdecode(input, LoadImageType.AnyColor, image);
+            _debugLogger.Log(debugLogBuilder => debugLogBuilder.AddMessage("Start process image").AddImage(image));
+            return Result<Mat>.Ok(image);
+        }
+    }
+
+    public class SelectLettersContours : IFilter<Point[][], Point[][]>
+    {
+        private Mat _image;
+
+        public Result<Point[][]> Process(Point[][] input)
+        {
+            var minLetterHeight = (int)(_image.Height * 0.30);
+            var maxLetterHeight = (int)(_image.Height * 0.8);
+            var minLetterWidth = (int)(_image.Width * 0.04);
+            var maxLetterWidth = (int)(_image.Width * 0.1);
+
+            var letterCountors = input.Where(countor =>
+            {
+                var countorHeight = countor.Max(point => point.Y) - countor.Min(point => point.Y);
+                var countorWidth = countor.Max(point => point.X) - countor.Min(point => point.X);
+                return countorHeight > minLetterHeight && countorHeight < maxLetterHeight && countorWidth > minLetterWidth && countorWidth < maxLetterWidth;
+            }).OrderBy(points => points.Min(point => point.X)).AsParallel().ToArray();
+
+            return Result.Ok(letterCountors);
+        }
+
+        public void UseImage(Mat value)
+        {
+            _image = value;
+        }
+    }
+
+    public class StringAgregateFilter : IFilter<IEnumerable<IEnumerable<char>>, IEnumerable<string>>
+    {
+        private readonly IDebugLogger _debugLogger;
+
+        public StringAgregateFilter(IDebugLogger debugLogger)
+        {
+            _debugLogger = debugLogger;
+        }
+
+        public Result<IEnumerable<string>> Process(IEnumerable<IEnumerable<char>> input)
+        {
+            return Result.Ok(input.Select(s =>
+            {
+                var result = string.Concat(s);
+                _debugLogger.Log(logBuilder => logBuilder.AddMessage($"Founded licence plate: {result}"));
+                return result;
+            }).ToList().AsEnumerable());
+        }
+    }
+
+     public class TeseractOcrFilter : IFilter<Mat, char>
+    {
+        private readonly IDebugLogger _debugLogger;
+
+        public TeseractOcrFilter(IDebugLogger debugLogger)
+        {
+            _debugLogger = debugLogger;
+        }
+
+        public Result<char> Process(Mat input)
+        {
+            try
+            {
+                var buff = new VectorOfByte();
+                CvInvoke.Imencode(".tiff", input, buff);
+                using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
+                {
+                    engine.DefaultPageSegMode = PageSegMode.SingleChar;
+                    engine.SetVariable("tessedit_char_whitelist", "0123456789ABEKMHOPCTYXDI");
+                    using (var img = Pix.LoadTiffFromMemory(buff.ToArray()))
+                    {
+                        using (var page = engine.Process(img))
+                        {
+                            var text = page.GetText()[0];
+
+                            _debugLogger.Log(debugLogBuilder => debugLogBuilder.AddMessage("Letter").AddImage(input).AddMessage($"has been recognized as: {text}"));
+
+                            return Result.Ok(text);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                return Result.Fail<char>(e.Message);
+            }
+        }
+    }
+
+public class Bootstrapper : UnityNancyBootstrapper
+    {
+        protected override void ApplicationStartup(IUnityContainer container, IPipelines pipelines)
+        {
+            // No registrations should be performed in here, however you may
+            // resolve things that are needed during application startup.
+        }
+
+        protected override void ConfigureApplicationContainer(IUnityContainer existingContainer)
+        {
+            // Perform registation that should have an application lifetime
+            existingContainer.RegisterInstance<IUnityContainer>(existingContainer);
+            existingContainer.RegisterType<IPipeFactory, PipeFactory>();
+            existingContainer.RegisterType<IVehicleRegistrationPlateRecognizer, VehicleRegistrationPlateRecognizer>();
+        }
+
+        protected override void ConfigureRequestContainer(IUnityContainer container, NancyContext context)
+        {
+            // Perform registrations that should have a request lifetime
+#pragma warning disable 618
+            container.RegisterType<IDebugLogBuilder, WebDebugLogBuilder>(new ContainerControlledLifetimeManager());
+#pragma warning restore 618
+            container.RegisterType<IDebugLogProvier, WebDebugLogBuilder>(new ContainerControlledLifetimeManager());
+            container.RegisterType<IDebugLogger, DebugLogger>(new ContainerControlledLifetimeManager());
+        }
+
+        protected override void RequestStartup(IUnityContainer container, IPipelines pipelines, NancyContext context)
+        {
+            // No registrations should be performed in here, however you may
+            // resolve things that are needed during request startup.
+        }
+    }
+
+
+    public class DevelperModule : NancyModule
+    {
+        public DevelperModule(IVehicleRegistrationPlateRecognizer recognizer, IDebugLogProvier logProvider)
+        {
+            Get["/"] = p => View["selectFilesForm.html"];
+            Post["/"] = p =>
+            {
+                foreach (var file in Request.Files)
+                {
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        file.Value.CopyTo(ms);
+                        var imageData = ms.ToArray();
+                        recognizer.Process(imageData);
+                    }
+                }
+
+                var logs = logProvider.GetLog();
+                return View["log.html", new { Logs = logs }];
+            };
+        }
+    }
+
+    public class PipeFactory : IPipeFactory
+    {
+        private readonly IUnityContainer _unityContainer;
+
+        public PipeFactory(IUnityContainer unityContainer)
+        {
+            _unityContainer = unityContainer;
+        }
+
+        public TProcessor GetProcessor<TProcessor>() where TProcessor : IProcessor
+        {
+            return _unityContainer.Resolve<TProcessor>();
+        }
+    }
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            using (var nancyHost = new NancyHost(new Uri("http://localhost:1234")))
+            {
+                nancyHost.Start();
+                Console.WriteLine("Web server running... Press enter to stop it.");
+                Console.ReadLine();
+            }
+            Console.WriteLine("Web server stopped... Press enter to exit.");
+            Console.ReadLine();
+        }
+    }
+
+    
+
+\end{lstlisting}
