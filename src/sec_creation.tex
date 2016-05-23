@@ -40,59 +40,9 @@
 Описанная реализация фокусируется на возможности распределенных вычислений которая в контексте обработки изображений бесполезно, поскольку производительность полученная от распределения фильтров на различные машины будет нивелированна временем затраченным передачу обрабатываемого изображения по сети. Главная цель при при использовании шаблона <<Каналы и фильтры>> в данном программном средстве это улучшение качества кода с точки зрения читаемости и модифицируемости. Декомпозиция кода на отдельные фильтры обработчики помогает упростить тестирование и реализацию отдельных модулей а правильная реализация каналов поможет в понимании связи фильтров и того что в целом происходит при обработке изображения. 
 
 Прежде чем приступить к рассмотрению иходного кода требуется определить вспомогательные классы. 
-В листинге \ref{lst:creation:result} приведена чать описания класса Result.
-\begin{lstlisting}[style=fsharpstyle, caption={Определение вспомогательного класса Result}, label=lst:creation:result]
-public class Result
-{
-  protected Result(bool success, string error)
-  {
-    Success = success;
-    Error = error;
-  }
-  public bool Success { get; private set; }
-  public bool Failed => !Success;
-  public string Error { get; private set; }
-  
-  // ... 
-}
-\end{lstlisting}
-Данный класс предназначен для упрощения обработки ошибок: все методы которые могут завершится неудачей должны возвращать класс Result не создавая при этом исключительных ситуаций. Использование описанной техники вместо исключительных ситуаций делает код понятнее потому как он исполняется последовательно как этого требует структурное программирование \cite{structured_programming}. Так же в программном средстве используется техника помогающая бороться с ошибками связанными с null значением. Это очень большая проблема для программистов! Техника состоит из 2 частей, первая это библиотека NullGuard \cite{null_guard}, которая встраивается в процесс компиляции и в начало каждого метода добавляет код проверяющий все входящие параметра на null значения, и в конец метода код проверяющий выходящее значение на null. Это запретит разработчику использовать null значения. Но для тех ситуаций где действительно значение может быть а может и не быть введем класс Maybe, код которого представлен на листинге \ref{lst:creation:maybe}. Приведенный выше подход помогает четко разделить в коде значения которые могут принимать значения null а какие нет.
-\begin{lstlisting}[style=fsharpstyle, caption={Определение вспомогательного класса Maybe}, label=lst:creation:maybe]
-public struct Maybe<T>
-{
-  private readonly T _value;
-  public T Value
-  {
-    get
-    {
-      if (HasNoValue)
-      {
-        throw new NotSupportedException("Maybe has not value");
-      }
-        return _value;
-      }
-    }
-  }
-  public bool HasValue => return _value != null; 
-  public bool HasNoValue => !HasValue;
-  private Maybe([AllowNull] T value)
-  {
-    _value = value;
-  }
-  public static implicit operator Maybe<T>([AllowNull] T value)
-  {
-    return new Maybe<T>(value);
-  }
-}
-\end{lstlisting}
+В листинге \ref{lst:result_class} можно найти определение класса Result. Данный класс предназначен для упрощения обработки ошибок: все методы которые могут завершится неудачей должны возвращать класс Result не создавая при этом исключительных ситуаций. Использование описанной техники вместо исключительных ситуаций делает код понятнее потому как он исполняется последовательно как этого требует структурное программирование \cite{structured_programming}. Так же в программном средстве используется техника помогающая бороться с ошибками связанными с null значением. Это очень большая проблема для программистов! Техника состоит из 2 частей, первая это библиотека NullGuard \cite{null_guard}, которая встраивается в процесс компиляции и в начало каждого метода добавляет код проверяющий все входящие параметра на null значения, и в конец метода код проверяющий выходящее значение на null. Это запретит разработчику использовать null значения. Но для тех ситуаций где действительно значение может быть а может и не быть введем класс Maybe, код которого представлен на листинге \ref{lst:maybe}. Приведенный выше подход помогает четко разделить в коде значения которые могут принимать значения null а какие нет.
 
-Рассмотрим реализацию архитектурного шаблона <<Каналы и фильтры>>. В листинге \ref{lst:creation:ifilter} можно увидет определение интерфейса для фильтра. 
-\begin{lstlisting}[style=fsharpstyle, caption={Определение интерфейса для фильтра}, label=lst:creation:ifilter]
-public interface IFilter<in TIn, TOut> 
-{
-	Result<TOut> Process(TIn input);
-}
-\end{lstlisting}
+Рассмотрим реализацию архитектурного шаблона <<Каналы и фильтры>>. В листинге \ref{lst:ifilter} можно увидет определение интерфейса для фильтра. 
 Интерфейс фильтр определяет сущность производящую определенную операцию над входящими данными и возвращающую результат либо ошибку. На изображении \ref{fig:creation:filters_uml} представленна UML диаграмма классов фильтров используемых в проекте.
 \begin{figure}[ht] 
     \centering
@@ -134,134 +84,12 @@ public interface IFilter<in TIn, TOut>
 
 При реализации каналов хорошо подойдет прием программирования <<Fluent interface>> - способ реализации объектно-ориентированного API, нацеленный на повышение читабельности исходного кода программы.
 
-В листинге \ref{lst:creation:pipe} можно увидеть реализацию описанных выше функций.
+В листинге \ref{lst:pipe} можно увидеть реализацию описанных выше функций.
 
-\begin{lstlisting}[style=fsharpstyle,caption={Определение класса Pipe},label=lst:creation:pipe]
-public class Pipe<T>
-{
-  internal IPipeFactory PipeFactory { get; }
+Для реализации связей между фильтрами многие ко многим была использованна возможностью языка \csharp{} <<Метод расширение>>. Это возможность написать статический метод за пределами типа $A$ и принимающий первым параметром объект типа $A$, при чем вызов этого метода будет выглядеть как вызов метода у типа $A$. Самое интересное что тип может быть интерфейсом! И для реализации связей я использовал интерфейс IEnumerable<T>. Реализация метода приведена в листинге \ref{lst:pipe_enumeration}.
 
-  public Pipe(IPipeFactory pipeFactory)
-  {
-    PipeFactory = pipeFactory;
-  }
+Результат использования фильтров и каналов можно увидеть в листинге \ref{lst:pipe_and_filters_results}.
 
-  protected Result<T> Obj { get; set; }
-
-  public Pipe<TOut> Do<TFilter, TOut>(Action<TFilter> initAction) where TFilter: IFilter<T, TOut>
-  {
-    Pipe<TOut> result;
-    if (Obj.Success)
-    {
-      var processor = PipeFactory.GetProcessor<TFilter>();
-      initAction(processor);
-      var processingResult = processor.Process(Obj.Value);
-      result = new Pipe<TOut>(PipeFactory).Use(processingResult);
-    }
-    else
-    {
-      result = new Pipe<TOut>(PipeFactory).Use(Result.Fail<TOut>(Obj.Error));
-    }
-
-    return result;
-  }
-
-  public Pipe<TOut> Do<TProcessor, TOut>() where TProcessor : IFilter<T, TOut>
-  {
-    Pipe<TOut> result;
-    if (Obj.Success)
-    {
-      var processor = PipeFactory.GetProcessor<TProcessor>();
-      var processingResult = processor.Process(Obj.Value);
-      result = new Pipe<TOut>(PipeFactory).Use(processingResult);
-    }
-    else
-    {
-      result = new Pipe<TOut>(PipeFactory).Use(Result.Fail<TOut>(Obj.Error));
-    }
-
-    return result;
-  }
-
-  public Result<T> GetResult()
-  {
-    return Obj;
-  }
-
-  public Pipe<T> Use(T obj)
-  {
-    Obj = Result<T>.Ok(obj);
-    return this;
-  }
-
-  public Pipe<T> Use(Result<T> obj)
-  {
-    Obj = obj;
-    return this;
-  }
-
-  public Pipe<T> SaveCurrentResultTo(Action<Result<T>> saveCurrentResultAction)
-  {
-    saveCurrentResultAction(this.GetResult());
-    return this;
-  }
-}
-\end{lstlisting}
-
-Для реализации связей между фильтрами многие ко многим была использованна возможностью языка \csharp{} <<Метод расширение>>. Это возможность написать статический метод за пределами типа $A$ и принимающий первым параметром объект типа $A$, при чем вызов этого метода будет выглядеть как вызов метода у типа $A$. Самое интересное что тип может быть интерфейсом! И для реализации связей я использовал интерфейс IEnumerable<T>. Реализация метода приведена в листинге \ref{lst:creation:pipe_enumeration}.
-\begin{lstlisting}[style=fsharpstyle,caption={Определение метода расширения класса Pipe},label=lst:creation:pipe_enumeration]
-public static Pipe<IEnumerable<TOut>> ForEachItem<T, TOut>(this Pipe<IEnumerable<T>> pipe, Func<Pipe<T>, Pipe<TOut>>  action)
-{
-  var currentResult = pipe.GetResult();
-  var result = new List<TOut>();
-  if (currentResult.Success)
-  {
-    foreach (var item in currentResult.Value)
-    {
-      var processResult = action(new Pipe<T>(pipe.PipeFactory).Use(item)).GetResult();
-      if (processResult.Success)
-      {
-        result.Add(processResult.Value);
-      }
-    }
-  }
-
-  if (result.Any())
-  {
-    return new Pipe<IEnumerable<TOut>>(pipe.PipeFactory).Use(Result.Ok(result.AsEnumerable()));
-  }
-  else
-  {
-    return new Pipe<IEnumerable<TOut>>(pipe.PipeFactory).Use(Result.Fail<IEnumerable<TOut>>("Not one processor hasn't finish successfulley"));
-  }
-}
-\end{lstlisting}
-
-Результат использования фильтров и каналов можно увидеть в листинге \ref{lst:creation:pipe_and_filters_results}.
-
-\begin{lstlisting}[style=fsharpstyle,caption={Определение метода расширения класса Pipe},label=lst:creation:pipe_and_filters_results]
-public Result<IEnumerable<string>> Process(byte[] input)
-{
-  Mat binarizedPlate = null;
-
-  return _processFactory.Invoke()
-    .Use(input)
-    .Do<ReadImageFromBytesFilter, Mat>()
-    .Do<MakeImageGrayFilter, Mat>()
-    .Do<DetectAndCropPlateNumberFilter, IEnumerable<Mat>>()
-    .ForEachItem(p => 
-      p.Do<LogCurrentImageFilter, Mat>()
-      .Do<OtsuBinarizationFilter, Mat>()
-      .SaveCurrentResultTo(r => binarizedPlate = r.Value.Clone())
-      .Do<InvertBinarizedImageFilter, Mat>()
-      .Do<FindContoursFilter, Point[][]>()
-      .Do<SelectLettersContours, Point[][]>(processor => processor.UseImage(binarizedPlate))
-      .Do<CropLettersFilter, IEnumerable<Mat>>(processor => processor.UseImage(binarizedPlate))
-      .ForEachItem(ip => ip.Do<GaussianBlurFilter, Mat>().Do<TeseractOcrFilter, char>()))
-    .Do<StringAgregateFilter, IEnumerable<string>>()
-    .GetResult();
-}
-\end{lstlisting}
 
 \subsubsection{}
 Микроядра
