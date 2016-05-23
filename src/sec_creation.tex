@@ -266,10 +266,16 @@ public Result<IEnumerable<string>> Process(byte[] input)
 \subsubsection{}
 Микроядра
 
-Для реализации микроядерной архитектуры мы будем использовать загрузку .net сборок. Для каждой 
+Для реализации микроядерной архитектуры будет использоваться загрузка .net сборок. Для создание плагинов потребуется реализовать интерфейс IRecongnitionResultHander, чей код приведен в листинге \ref{lst:recognition_result_handler}. После реализации скомпилированную сборку, представляющую из себя *.dll файл, нужно подложить в папку <<plugins>>. При запуске сервера будет произведенна инициализация плагинов. Схему алгоритма загрузки плагинов можно увидеть на рисунке \ref{fig:creation:load_assemly}. Обращу внимание что поскольку плагины располагаются на сервере и у посторонних людей нет возможности их модификации либо добавления, плагины можно считать безопасными, поэтому они не требуют настройки безопастности среды выполнения.
+
+\begin{figure}[p] 
+    \centering
+    \includegraphics[width=\textwidth,height=\textheight,keepaspectratio]{load_assembly.png}  
+    \caption{Схема алгоритма загрузки плагинов}
+    \label{fig:creation:load_assemly}
+\end{figure}
 
 \subsection{Сторонние библиотеки}
-
 \subsubsection{}
 \label{sub:creation:tesseract}
 Tesseract 

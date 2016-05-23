@@ -1,0 +1,10 @@
+\sectioncentered*{ПРИЛОЖЕНИЕ}
+\addcontentsline{toc}{section}{ПРИЛОЖЕНИЕ}
+
+\begin{lstlisting}[style=fsharpstyle,caption={Определение интерфейса IRecongnitionResultHander}, label=lst:recognition_result_handler]
+public interface IRecongnitionResultHander
+{
+  void HandleSuccess(string result, Mat image);
+  void HandleFaulure(Mat image);
+}
+\end{lstlisting}
