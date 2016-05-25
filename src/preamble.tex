@@ -92,7 +92,7 @@
 
 % Зачем: Переопределяем стандартную нумерацию, т.к. в отчете будут только section и т.д. в терминологии TeX
 \makeatletter
-\renewcommand{\thesection}{\arabic{section}}
+\renewcommand{\thesection}{\bfseries\arabic{section}}
 \makeatother
 
 
@@ -152,9 +152,8 @@
     {\fivecharsapprox}%
     {-1em \@plus -1ex \@minus -.2ex}%
     {1em \@plus .2ex}%
-    {\raggedright\hyphenpenalty=10000\normalfont\normalsize\bfseries}}
+    {\raggedright\hyphenpenalty=10000\normalfont\normalsize}}
 \makeatother
-
 
 % Зачем: Задает стиль заголовков пунктов
 % Почему: Пункты 2.1.1, 2.2.5 и ПРИЛОЖЕНИЕ Л Требований по оформлению пояснительной записки.
