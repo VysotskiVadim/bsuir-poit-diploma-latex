@@ -91,14 +91,23 @@
 
 
 % Зачем: Переопределяем стандартную нумерацию, т.к. в отчете будут только section и т.д. в терминологии TeX
-\makeatletter
-\renewcommand{\thesection}{\arabic{section}}
-\makeatother
+% \makeatletter
+% \renewcommand{\thesection}{\arabic{section}}
+% \makeatother
 
 
 % Зачем: Пункты (в терминологии требований) в терминологии TeX subsubsection должны нумероваться
 % Почему: Пункт 2.2.3 Требований по оформлению пояснительной записки.
 \setcounter{secnumdepth}{3}
+
+% Зачем: Переопределяем стандартную нумерацию, т.к. в отчете будут только section и т.д. в терминологии TeX
+\renewcommand{\thesection}{\arabic{section}}
+
+% Зачем: Для определения разных стилей (под)разделов в содержании и в тексте.
+\usepackage{titlesec}
+
+% Зачем: Начинаем разделы с новой страницы
+\newcommand{\sectionbreak}{\clearpage}
 
 
 % Зачем: Настраивает отступ между таблицей с содержанимем и словом СОДЕРЖАНИЕ
@@ -135,36 +144,39 @@
 % Зачем: Задает стиль заголовков раздела жирным шрифтом, прописными буквами, без точки в конце
 % Почему: Пункты 2.1.1, 2.2.5, 2.2.6 и ПРИЛОЖЕНИЕ Л Требований по оформлению пояснительной записки.
 \makeatletter
-\renewcommand\section{%
-  \clearpage\@startsection {section}{1}%
-    {\fivecharsapprox}%
-    {-1em \@plus -1ex \@minus -.2ex}%
-    {1em \@plus .2ex}%
-    {\raggedright\hyphenpenalty=10000\normalfont\large\bfseries\MakeUppercase}}
+\titleformat{\section}
+  {\hyphenpenalty=10000\normalfont\large\bfseries}
+  {\thesection}
+  {1em \@plus 1ex \@minus .2ex}{\MakeUppercase}
+ 
+\titlespacing{\section}
+    {\parindent}{0em}{1em \@plus .2ex}
 \makeatother
 
 
 % Зачем: Задает стиль заголовков подразделов
 % Почему: Пункты 2.1.1, 2.2.5 и ПРИЛОЖЕНИЕ Л Требований по оформлению пояснительной записки.
 \makeatletter
-\renewcommand\subsection{%
-  \@startsection{subsection}{2}%
-    {\fivecharsapprox}%
-    {-1em \@plus -1ex \@minus -.2ex}%
-    {1em \@plus .2ex}%
-    {\raggedright\hyphenpenalty=10000\normalfont\normalsize\bfseries}}
+\titleformat{\subsection}
+  {\hyphenpenalty=10000\normalfont\normalsize}
+  {\textbf{\thesubsection}}
+  {1em \@plus 1ex \@minus .2ex}{}
+
+\titlespacing{\subsection}
+    {\parindent}{1em \@plus 1ex \@minus .2ex}{1em \@plus .2ex}
 \makeatother
 
 
 % Зачем: Задает стиль заголовков пунктов
 % Почему: Пункты 2.1.1, 2.2.5 и ПРИЛОЖЕНИЕ Л Требований по оформлению пояснительной записки.
 \makeatletter
-\renewcommand\subsubsection{
-  \@startsection{subsubsection}{3}%
-    {\fivecharsapprox}%
-    {-1em \@plus -1ex \@minus -.2ex}%
-    {\z@}%
-    {\raggedright\hyphenpenalty=10000\normalfont\normalsize\bfseries}}
+\titleformat{\subsubsection}
+  {\hyphenpenalty=10000\normalfont\normalsize}
+  {\textbf{\thesubsubsection}}
+  {1em \@plus 1ex \@minus .2ex}{}
+
+\titlespacing{\subsubsection}
+    {\parindent}{1em \@plus 1ex \@minus .2ex}{0em}
 \makeatother
 
 % Зачем: для оформления введения и заключения, они должны быть выровнены по центру.
